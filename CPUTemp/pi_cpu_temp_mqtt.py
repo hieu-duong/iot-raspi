@@ -19,6 +19,8 @@ from time import gmtime, strftime
 import subprocess
 import random
 import ssl
+import json
+import uuid
 
 import jwt
 import paho.mqtt.client as mqtt
@@ -97,6 +99,18 @@ def on_publish(unused_client, unused_userdata, unused_mid):
     print('on_publish')
 
 
+def createJSON(id, unique_id, timestamp, temperature):
+    data = {
+        'sensorID': id,
+        'uniqueID': unique_id,
+        'timecollected': timestamp,
+        'temperature': temperature
+    }
+
+    json_str = json.dumps(data)
+    return json_str
+
+
 def parse_command_line_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -142,6 +156,11 @@ def parse_command_line_args():
 def main():
     global minimum_backoff_time
     args = parse_command_line_args()
+    registry_id = args.registry_id
+    device_id = args.device_id
+    sensorId = registry_id + "." + device_id
+    uniqueID = str(uuid.uuid4()) + "-" + sensorID
+    currentTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
     # Create our MQTT client. The client_id is a unique string that identifies
     # this device. For Google Cloud IoT Core, it must be in the format below.
@@ -203,8 +222,9 @@ def main():
         else:
             temp = 40
 
-        payload = '{}/{} Time {} temperature {}'.format(
-                args.registry_id, args.device_id, strftime("%Y-%m-%d %H:%M:%S", gmtime()), temp)
+        # payload = '{}/{} Time {} temperature {}'.format(
+                # args.registry_id, args.device_id, strftime("%Y-%m-%d %H:%M:%S", gmtime()), temp)
+        payload = createJSON(sensorID, uniqueID, currentTime, temp)
         print('Publishing message {}'.format(payload))
         # Publish "payload" to the MQTT topic. qos=1 means at least once
         # delivery. Cloud IoT Core also supports qos=0 for at most once
