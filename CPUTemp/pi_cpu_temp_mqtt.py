@@ -158,7 +158,7 @@ def main():
     args = parse_command_line_args()
     registry_id = args.registry_id
     device_id = args.device_id
-    sensorId = registry_id + "." + device_id
+    sensorID = registry_id + "." + device_id
     uniqueID = str(uuid.uuid4()) + "-" + sensorID
     currentTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
