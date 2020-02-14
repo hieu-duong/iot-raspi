@@ -216,6 +216,9 @@ def main():
         # print('Finished.')
         print('Sent.')
 
+        # Wait before the next publishing
+        time.sleep(5.0)
+
 
 if __name__ == '__main__':
     main()
