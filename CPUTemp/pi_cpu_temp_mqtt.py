@@ -139,41 +139,10 @@ def parse_command_line_args():
     return parser.parse_args()
 
 
-def main():
-    global minimum_backoff_time
-    args = parse_command_line_args()
-
-    # Create our MQTT client. The client_id is a unique string that identifies
-    # this device. For Google Cloud IoT Core, it must be in the format below.
-    client = mqtt.Client(
-            client_id=(
-                    'projects/{}/locations/{}/registries/{}/devices/{}'
-                    .format(
-                            args.project_id, args.cloud_region,
-                            args.registry_id, args.device_id)))
-
-    # With Google Cloud IoT Core, the username field is ignored, and the
-    # password field is used to transmit a JWT to authorize the device.
-    client.username_pw_set(
-            username='unused',
-            password=create_jwt(
-                    args.project_id, args.private_key_file, args.algorithm))
-
-    # Enable SSL/TLS support.
-    client.tls_set(ca_certs=args.ca_certs, tls_version=ssl.PROTOCOL_TLSv1_2)
-
-    # Register message callbacks. https://eclipse.org/paho/clients/python/docs/
-    # describes additional callbacks that Paho supports. In this example, the
-    # callbacks just print to standard out.
-    client.on_connect = on_connect
-    client.on_publish = on_publish
-    client.on_disconnect = on_disconnect
-
-    # Connect to the Google MQTT bridge.
-    client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
-
+def send_loop():
     # Start the network loop.
-    client.loop_start()
+    # client.loop_start()
+    client.loop()
 
     # Wait if backoff is required.
     if should_backoff:
@@ -210,8 +179,47 @@ def main():
     client.publish(mqtt_topic, payload, qos=1)
 
     # End the network loop and finish.
-    client.loop_stop()
-    print('Finished.')
+    # client.loop_stop()
+    # print('Finished.')
+    print('Sent.')
+
+
+def main():
+    global minimum_backoff_time
+    args = parse_command_line_args()
+
+    # Create our MQTT client. The client_id is a unique string that identifies
+    # this device. For Google Cloud IoT Core, it must be in the format below.
+    client = mqtt.Client(
+            client_id=(
+                    'projects/{}/locations/{}/registries/{}/devices/{}'
+                    .format(
+                            args.project_id, args.cloud_region,
+                            args.registry_id, args.device_id)))
+
+    # With Google Cloud IoT Core, the username field is ignored, and the
+    # password field is used to transmit a JWT to authorize the device.
+    client.username_pw_set(
+            username='unused',
+            password=create_jwt(
+                    args.project_id, args.private_key_file, args.algorithm))
+
+    # Enable SSL/TLS support.
+    client.tls_set(ca_certs=args.ca_certs, tls_version=ssl.PROTOCOL_TLSv1_2)
+
+    # Register message callbacks. https://eclipse.org/paho/clients/python/docs/
+    # describes additional callbacks that Paho supports. In this example, the
+    # callbacks just print to standard out.
+    client.on_connect = on_connect
+    client.on_publish = on_publish
+    client.on_disconnect = on_disconnect
+
+    # Connect to the Google MQTT bridge.
+    client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
+
+    while True:
+        send_loop()
+        time.sleep(5.0)
 
 
 if __name__ == '__main__':
