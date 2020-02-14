@@ -139,51 +139,6 @@ def parse_command_line_args():
     return parser.parse_args()
 
 
-def send_loop():
-    # Start the network loop.
-    # client.loop_start()
-    client.loop()
-
-    # Wait if backoff is required.
-    if should_backoff:
-        # If backoff time is too large, give up.
-        if minimum_backoff_time > MAXIMUM_BACKOFF_TIME:
-            print('Exceeded maximum backoff time. Giving up.')
-        else:
-            # Otherwise, wait and connect again.
-            delay = minimum_backoff_time + random.randint(0, 1000) / 1000.0
-            print('Waiting for {} before reconnecting.'.format(delay))
-            time.sleep(delay)
-            minimum_backoff_time *= 2
-            client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
-
-    mqtt_topic = '/devices/{}/events'.format(args.device_id)
-
-    # Get the Raspberry Pi's processor temperature. 
-    if subprocess.call(["which", "/opt/vc/bin/vcgencmd"]) == 0:
-        temp = subprocess.check_output(["sudo", "/opt/vc/bin/vcgencmd", "measure_temp"]).split('=', 1)[-1].rstrip()
-    # Get Mac's proc temp if "sudo gem install iStats" is installed 
-    elif subprocess.call(["which", "istats"]) == 0:
-        #temp = subprocess.check_output(["istats"]).decode().split(":")[-1].split("\n")[0]
-        #temp = "".join(subprocess.check_output(["istats"]).decode().split()).split(":")[-1].split("F")[0]
-        temp = 40
-    else:
-        temp = 40
-
-    payload = '{}/{} Time {} temperature {}'.format(
-            args.registry_id, args.device_id, strftime("%Y-%m-%d %H:%M:%S", gmtime()), temp)
-    print('Publishing message {}'.format(payload))
-    # Publish "payload" to the MQTT topic. qos=1 means at least once
-    # delivery. Cloud IoT Core also supports qos=0 for at most once
-    # delivery.
-    client.publish(mqtt_topic, payload, qos=1)
-
-    # End the network loop and finish.
-    # client.loop_stop()
-    # print('Finished.')
-    print('Sent.')
-
-
 def main():
     global minimum_backoff_time
     args = parse_command_line_args()
@@ -218,8 +173,48 @@ def main():
     client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
 
     while True:
-        send_loop()
-        time.sleep(5.0)
+        # Start the network loop.
+        # client.loop_start()
+        client.loop()
+
+        # Wait if backoff is required.
+        if should_backoff:
+            # If backoff time is too large, give up.
+            if minimum_backoff_time > MAXIMUM_BACKOFF_TIME:
+                print('Exceeded maximum backoff time. Giving up.')
+            else:
+                # Otherwise, wait and connect again.
+                delay = minimum_backoff_time + random.randint(0, 1000) / 1000.0
+                print('Waiting for {} before reconnecting.'.format(delay))
+                time.sleep(delay)
+                minimum_backoff_time *= 2
+                client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
+
+        mqtt_topic = '/devices/{}/events'.format(args.device_id)
+
+        # Get the Raspberry Pi's processor temperature. 
+        if subprocess.call(["which", "/opt/vc/bin/vcgencmd"]) == 0:
+            temp = subprocess.check_output(["sudo", "/opt/vc/bin/vcgencmd", "measure_temp"]).split('=', 1)[-1].rstrip()
+        # Get Mac's proc temp if "sudo gem install iStats" is installed 
+        elif subprocess.call(["which", "istats"]) == 0:
+            #temp = subprocess.check_output(["istats"]).decode().split(":")[-1].split("\n")[0]
+            #temp = "".join(subprocess.check_output(["istats"]).decode().split()).split(":")[-1].split("F")[0]
+            temp = 40
+        else:
+            temp = 40
+
+        payload = '{}/{} Time {} temperature {}'.format(
+                args.registry_id, args.device_id, strftime("%Y-%m-%d %H:%M:%S", gmtime()), temp)
+        print('Publishing message {}'.format(payload))
+        # Publish "payload" to the MQTT topic. qos=1 means at least once
+        # delivery. Cloud IoT Core also supports qos=0 for at most once
+        # delivery.
+        client.publish(mqtt_topic, payload, qos=1)
+
+        # End the network loop and finish.
+        # client.loop_stop()
+        # print('Finished.')
+        print('Sent.')
 
 
 if __name__ == '__main__':
